@@ -66,8 +66,10 @@ class Sally(object):
 
     def validate_and_get_datas_from_csv_input(self, csv_bordereau):
         f = open(csv_bordereau)
-        for i in range(8):
-            line = f.next()
+#        for i in range(4):
+#            print i
+#            line = f.next()
+#            print line
 
         reader = unicodecsv.DictReader(f, delimiter=',')
         dict_first_line = reader.unicode_fieldnames
@@ -359,8 +361,8 @@ class FileDescriptor(object):
                         datetime_date_csv = datetime.strptime(csv_date, '%Y')
                     except:
                         return False
-            if int(datetime_date.year) < 1950:
-                return False
+#            if int(datetime_date.year) < 1950:
+#                return False
             if datetime_date == datetime_date_csv:
                 self.sameDate = True
                 return True
