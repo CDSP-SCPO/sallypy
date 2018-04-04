@@ -4,6 +4,7 @@ import os
 import sys
 import csv
 import unicodecsv
+import json
 from datetime import datetime
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
@@ -12,12 +13,6 @@ from collections import defaultdict
 from xml.etree import ElementTree as et
 import traceback
 
-COLUMNS = {u'identifier': 'COTE = identifier',
-           u'title': 'Titre de l\'article',
-           u'date': 'Date',
-           u'language': 'Langue'
-           }
-
 # Sally
 
 
@@ -25,6 +20,7 @@ class Sally(object):
     log_in_console = False
 
     def __init__(self, working_folder, csv_bordereau, console_log=True):
+        self.read_conf()
         self.log_in_console = console_log
         pdf_list = self.get_working_folder_pdf_files_list(working_folder)
         csv_datas = self.validate_and_get_datas_from_csv_input(csv_bordereau)
@@ -35,6 +31,13 @@ class Sally(object):
         files_list = self.get_files_info_list(pdf_list, csv_datas)
         self.write_report_csv(files_list, working_folder)
         self.write_controle_pdf_csv(files_list, working_folder)
+
+    def read_conf(self):
+        json_data = open("conf.json").read()
+        data = json.loads(json_data)
+        self.columns = data['csv_input_columns']
+        self.csv_input_starting_line = data['csv_input_starting_line']
+        self.separator = data['separator']
 
     def get_files_info_list(self, pdf_list, csv_datas):
         files_list = []
@@ -66,27 +69,23 @@ class Sally(object):
 
     def validate_and_get_datas_from_csv_input(self, csv_bordereau):
         f = open(csv_bordereau)
-        for i in range(8):
+        for i in range(self.csv_input_starting_line):
             line = f.next()
 
-        reader = unicodecsv.DictReader(f, delimiter=',')
+        reader = unicodecsv.DictReader(f, delimiter=str(self.separator))
         dict_first_line = reader.unicode_fieldnames
         if not self.check_csv_header(dict_first_line):
             print(
                 u"# Les intitulés de colonnes (ligne 9) du fichier csv indiqué sont erronnés, veuillez les vérifier. "
                 u"De même, assurez-vous que le fichier soit bien en utf-8.")
             return False
-        # csv_datas = []
-        # for row in reader:
-        #     csv_datas.append(row[COLUMNS[u'identifier']])
-        # return csv_datas
         csv_datas = {}
         for row in reader:
-            csv_datas[row[COLUMNS[u'identifier']]] = {u'title':row[COLUMNS[u'title']], u'date':row[COLUMNS[u'date']], u'language':row[COLUMNS[u'language']]}
+            csv_datas[row[self.columns[u'identifier']]] = {u'title':row[self.columns[u'title']], u'date':row[self.columns[u'date']], u'language':row[self.columns[u'language']]}
         return csv_datas
 
-    @staticmethod
-    def check_csv_header(headers):
+    def check_csv_header(self, headers):
+        print(headers)
         dict = {
             u'identifier': False,
             u'title': False,
@@ -94,8 +93,8 @@ class Sally(object):
             u'date': False,
         }
         for head in headers:
-            if head in COLUMNS.values():
-                dict[COLUMNS.keys()[COLUMNS.values().index(head)]] = True
+            if head in self.columns.values():
+                dict[self.columns.keys()[self.columns.values().index(head)]] = True
 
         return all(value is True for value in dict.values())
 
