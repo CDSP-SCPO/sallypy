@@ -66,10 +66,8 @@ class Sally(object):
 
     def validate_and_get_datas_from_csv_input(self, csv_bordereau):
         f = open(csv_bordereau)
-#        for i in range(4):
-#            print i
-#            line = f.next()
-#            print line
+        for i in range(8):
+            line = f.next()
 
         reader = unicodecsv.DictReader(f, delimiter=',')
         dict_first_line = reader.unicode_fieldnames
@@ -104,16 +102,14 @@ class Sally(object):
     @staticmethod
     def write_report_csv(files_list, working_folder):
         print(u"# Écriture du fichier report_sally.csv ...")
-        f = open(working_folder+'report_sally.csv', 'wb')
-        fieldnames = ['Nom du fichier', 'isLisible', 'isValide', 'sameDate', 'sameLanguage', 'sameTitle', 'Date',
-                      'Identifier', 'Langue', 'Title']
-        fieldnames = ['Nom du fichier', 'FichierValide', 'PDFValide', 'VersionPDF', 'Identifiant_existe', 'Date_identique', 'Titre identique', 'Langue_identique', 'Date_pdf', 'Identifier_pdf', 'Langue_pdf', 'Titre_pdf']
+        f = open(working_folder+'_report_sally.csv', 'wb')
+        fieldnames = ['Nom du fichier', 'TailleFichier', 'FichierValide', 'PDFValide', 'VersionPDF', 'Identifiant_existe', 'Date_identique', 'Titre identique', 'Langue_identique', 'Date_pdf', 'Identifier_pdf', 'Langue_pdf', 'Titre_pdf']
         writer = unicodecsv.DictWriter(f, delimiter=',', fieldnames=fieldnames)
         writer.writeheader()
 
         for file in files_list:
             writer.writerow(
-            {'Nom du fichier': file.filename, 'FichierValide': file.file_is_valid, 'PDFValide': file.pdf_version_is_valid,
+            {'Nom du fichier': file.filename, 'TailleFichier': file.file_size, 'FichierValide': file.file_is_valid, 'PDFValide': file.pdf_version_is_valid,
              'VersionPDF': file.pdf_version, 'Identifiant_existe': file.valid_identifier, 'Date_identique': file.sameDate,
              'Titre identique': file.sameTitle,
             'Langue_identique': file.sameLangue, 'Date_pdf': file.date, 'Identifier_pdf': file.identifier,
@@ -123,7 +119,7 @@ class Sally(object):
     @staticmethod
     def write_controle_pdf_csv(files_list, working_folder):
         print(u"# Écriture du fichier controle_pdf_sally.csv ...")
-        f = open(working_folder+'controle_pdf_sally.csv', 'wb')
+        f = open(working_folder+'_controle_pdf_sally.csv', 'wb')
         writer = unicodecsv.writer(f, delimiter=",")
         writer.writerow([u"Bibliothèque de SCIENCES PO (Paris)", u"Total des erreurs majeures du format PDF",
                          u"Validation du contrôle du format PDF"])
@@ -235,6 +231,19 @@ def xmp_to_dict(xmp):
     return XmpParser(xmp).meta
 
 
+"""
+    For Human readable file size
+"""
+
+
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','K','M','G','T','P','E','Z']:
+        if abs(num) < 1000.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1000.0
+    return "%.1f%s%s" % (num, 'Y', suffix)
+
+
 class FileDescriptor(object):
     pdf_version_is_valid = False
     file_is_valid = False
@@ -251,10 +260,12 @@ class FileDescriptor(object):
     sameDate = False
     sameTitle = False
     pdf_version = None
+    file_size = None
 
     def __init__(self, pdf_file_path):
         self.hydrate_metadatas(pdf_file_path)
         self.filename = os.path.basename(pdf_file_path)
+        self.file_size = sizeof_fmt(os.path.getsize(pdf_file_path))
 
     def hydrate_metadatas(self, pdf_file_path):
         pdf_file = self.validate_pdf_format(pdf_file_path)
@@ -307,7 +318,7 @@ class FileDescriptor(object):
         try:
             csv_title = csv_datas[self.identifier]['title']
         except Exception as e:
-            print(traceback.format_exc())
+            # print(traceback.format_exc())
             csv_title = None
         self.valid_title = self.validate_title(csv_title)
 
@@ -361,8 +372,8 @@ class FileDescriptor(object):
                         datetime_date_csv = datetime.strptime(csv_date, '%Y')
                     except:
                         return False
-#            if int(datetime_date.year) < 1950:
-#                return False
+            if int(datetime_date.year) < 1950:
+                return False
             if datetime_date == datetime_date_csv:
                 self.sameDate = True
                 return True
