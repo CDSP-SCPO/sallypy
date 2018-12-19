@@ -1,0 +1,10 @@
+{
+  "separator":",",
+  "csv_input_columns":  {
+    "identifier": "COTE",
+    "title": "Titre de l'article (noms longs)",
+    "date": "Date intellectuelle article",
+    "language": "Langue"
+  },
+  "csv_input_starting_line": 9
+}

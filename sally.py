@@ -19,8 +19,8 @@ import traceback
 class Sally(object):
     log_in_console = False
 
-    def __init__(self, working_folder, csv_bordereau, console_log=True):
-        self.read_conf()
+    def __init__(self, working_folder, csv_bordereau, conf="conf.json", console_log=True):
+        self.read_conf(conf)
         self.log_in_console = console_log
         pdf_list = self.get_working_folder_pdf_files_list(working_folder)
         csv_datas = self.validate_and_get_datas_from_csv_input(csv_bordereau)
@@ -32,11 +32,11 @@ class Sally(object):
         self.write_report_csv(files_list, working_folder)
         self.write_controle_pdf_csv(files_list, working_folder)
 
-    def read_conf(self):
-        json_data = open("conf.json").read()
+    def read_conf(self, conf):
+        json_data = open(conf).read()
         data = json.loads(json_data)
         self.columns = data['csv_input_columns']
-        self.csv_input_starting_line = data['csv_input_starting_line']
+        self.csv_input_starting_line = data['csv_input_starting_line']+1
         self.separator = data['separator']
 
     def get_files_info_list(self, pdf_list, csv_datas):
@@ -77,7 +77,7 @@ class Sally(object):
         if not self.check_csv_header(dict_first_line):
             print(
                 u"# Les intitulés de colonnes (ligne 9) du fichier csv indiqué sont erronnés, veuillez les vérifier. "
-                u"De même, assurez-vous que le fichier soit bien en utf-8.")
+                u"De même, assurez-vous que le fichier soit bien en utf-8 et que les séparateurs soient les mêmes qu'indiqués dans la configuration ("+ self.separator +").")
             return False
         csv_datas = {}
         for row in reader:
@@ -85,7 +85,6 @@ class Sally(object):
         return csv_datas
 
     def check_csv_header(self, headers):
-        print(headers)
         dict = {
             u'identifier': False,
             u'title': False,
@@ -101,7 +100,7 @@ class Sally(object):
     @staticmethod
     def write_report_csv(files_list, working_folder):
         print(u"# Écriture du fichier report_sally.csv ...")
-        f = open(working_folder+'_report_sally.csv', 'wb')
+        f = open(working_folder+os.path.basename(os.path.normpath(working_folder))+'_report_sally.csv', 'wb')
         fieldnames = ['Nom du fichier', 'TailleFichier', 'FichierValide', 'PDFValide', 'VersionPDF', 'Identifiant_existe', 'Date_identique', 'Titre identique', 'Langue_identique', 'Date_pdf', 'Identifier_pdf', 'Langue_pdf', 'Titre_pdf']
         writer = unicodecsv.DictWriter(f, delimiter=',', fieldnames=fieldnames)
         writer.writeheader()
@@ -113,12 +112,12 @@ class Sally(object):
              'Titre identique': file.sameTitle,
             'Langue_identique': file.sameLangue, 'Date_pdf': file.date, 'Identifier_pdf': file.identifier,
              'Langue_pdf': file.language, 'Titre_pdf': file.title})
-        print(u" Fichier report_sally.csv créé")
+        print(u" Fichier report_sally.csv créé ("+ working_folder+os.path.basename(os.path.normpath(working_folder))+'_report_sally.csv' +")")
 
     @staticmethod
     def write_controle_pdf_csv(files_list, working_folder):
         print(u"# Écriture du fichier controle_pdf_sally.csv ...")
-        f = open(working_folder+'_controle_pdf_sally.csv', 'wb')
+        f = open(working_folder+os.path.basename(os.path.normpath(working_folder))+'_controle_pdf_sally.csv', 'wb')
         writer = unicodecsv.writer(f, delimiter=",")
         writer.writerow([u"Bibliothèque de SCIENCES PO (Paris)", u"Total des erreurs majeures du format PDF",
                          u"Validation du contrôle du format PDF"])
@@ -138,7 +137,7 @@ class Sally(object):
         for file in files_list:
             writer.writerow([file.identifier, u'1', u"Non" if file.file_is_valid is False else u"Oui", u"1" if file.file_is_valid is False else u"0"])
 
-        print(u" Fichier controle_pdf_sally.csv créé")
+        print(u" Fichier controle_pdf_sally.csv créé ("+ working_folder+os.path.basename(os.path.normpath(working_folder))+'_controle_pdf_sally.csv' +")")
 
     def write_logs(self, string):
         if self.log_in_console:
@@ -387,8 +386,22 @@ class FileDescriptor(object):
 if __name__ == '__main__':
     if len(sys.argv) == 3:
         if os.path.exists(sys.argv[1]):
-            sally = Sally(sys.argv[1], sys.argv[2])
+            if os.path.exists(sys.argv[2]):
+                sally = Sally(working_folder=sys.argv[1], csv_bordereau=sys.argv[2])
+            else:
+                print(u"Le chemin indiqué pour le bordereau n'existe pas")
         else:
-            print(u"Le chemin indiqué n'existe pas")
+            print(u"Le chemin indiqué pour les fichiers n'existe pas")
+    elif len(sys.argv) == 4:
+        if os.path.exists(sys.argv[1]):
+            if os.path.exists(sys.argv[2]):
+                if os.path.exists(sys.argv[3]):
+                    sally = Sally(working_folder=sys.argv[1], csv_bordereau=sys.argv[2], conf=sys.argv[3])
+                else:
+                    print(u"Le chemin indiqué pour la configuration n'existe pas")
+            else:
+                print(u"Le chemin indiqué pour le bordereau n'existe pas")
+        else:
+            print(u"Le chemin indiqué pour les fichiers n'existe pas")
     else:
-        print(u"Utilisation : python sally.py path_to_files path_to_bordeau_csv")
+        print(u"Utilisation : python sally.py path_to_files path_to_bordeau_csv (path_to_conf)")
